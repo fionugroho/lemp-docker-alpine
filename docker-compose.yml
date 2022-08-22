@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+  webserver:
+    build:
+      context: ./bin/${WEBPHP}
+    container_name: "${CONTAINER_NAME}-web"
+    restart: "always"
+    ports:
+      - "${HTTP}:80"
+      - "${HTTPS}:443"
+    links:
+      - database
+    volumes:
+      - ${DOCROOT=./nugi/html}:/var/lib/nginx/html/:rw
+      #- ${PHP_INI=./nugi/config/php/php.ini}:/etc/php7/php.ini
+      #- ${PHP_FPM=./nugi/config/php/php-fpm.d/www.conf}:/etc/php7/php-fpm.d/www.conf
+      - ${SSL=./nugi/config/ssl}:/etc/nginx/ssl/
+      - ${VHOSTS=./nugi/config/vhosts}:/etc/nginx/sites-enabled
+    environment:
+      PMA_PORT: ${DB_PORT}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DB}
+      HOST_MACHINE_MYSQL_PORT: ${DB_PORT}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  database:
+    build:
+      context: "./bin/${database}"
+    container_name: "${CONTAINER_NAME}-database"
+    restart: "always"
+    ports:
+      - "127.0.0.1:${DB_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DB}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: "${CONTAINER_NAME}-phpmyadmin"
+    links:
+      - database
+    environment:
+      PMA_HOST: database
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      UPLOAD_LIMIT: ${UPLOAD_LIMIT}
+      MEMORY_LIMIT: ${MEMORY_LIMIT}
+    ports:
+      - "${PMA_PORT}:80"
+      - "${PMA_PORT_SSL}:443"
